@@ -4,11 +4,11 @@
 
 #define LED_PIN     5
 #define NUM_LEDS    50
-#define BRIGHTNESS  30
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
 
+int BRIGHTNESS = 50;
 int UPDATES_PER_SECOND = 100;
 
 CRGBPalette16 currentPalette;
@@ -54,7 +54,7 @@ void setup() {
   server.begin();
   delay( 3000 ); // power-up safety delay
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-  FastLED.setBrightness(  BRIGHTNESS );
+  FastLED.setBrightness(((header.substring(43,46).toInt())-100));
   currentPalette = RainbowColors_p;
   currentBlending = LINEARBLEND;
 }
@@ -85,34 +85,39 @@ void loop(){
             client.println("Content-type:text/html");
             client.println("Connection: close");
             client.println();
-            // turns the GPIOs on and off
+            // read from header URL to get information
             if (header.indexOf("GET /?mode=SolidColor") >= 0) {
-              String color = header.substring(41,47);
-              Serial.println("THIS COLOR IS: " + color);
-              char colorHolder[7];
-              uint32_t hex = 0;
-              color.toCharArray(colorHolder, 7);
-              hex = strtol(colorHolder, NULL, 16);
-              fill_solid( currentPalette, 16, hex);
+                getBright();
+                String color = header.substring(72,78);
+                Serial.println("THIS COLOR IS: " + color);
+                char colorHolder[7];
+                uint32_t hex = 0;
+                color.toCharArray(colorHolder, 7);
+                hex = strtol(colorHolder, NULL, 16);
+                fill_solid( currentPalette, 16, hex);
                 displayColors();
             } else if (header.indexOf("GET /?mode=Rainbow") >= 0) {
-              Serial.println("ACTIVATE Rainbow");
+                Serial.println("ACTIVATE Rainbow");
+                getBright();
                 getSpeed();
                 currentPalette = RainbowColors_p;
                 displayColors();
             } else if (header.indexOf("GET /?mode=Audio") >= 0) {
-              getSpeed();
-              currentPalette = RainbowStripeColors_p;   currentBlending = NOBLEND;
-              displayColors();
+                getSpeed();
+                getSens();
+                currentPalette = RainbowStripeColors_p;   currentBlending = NOBLEND;
+                displayColors();
             } else if (header.indexOf("GET /?mode=Wave") >= 0) {
-              getSpeed();
-              currentPalette = PartyColors_p;
-              displayColors();
+                getSpeed();
+                currentPalette = PartyColors_p;
+                displayColors();
             }
 //==============================================================
 //                  HTML Page
 //==============================================================  
-client.println("<html lang=\"en\"><head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\"> <meta name=\"description\" content=\"\"> <meta name=\"author\" content=\"Mark Otto, Jacob Thornton, and Bootstrap contributors\"> <meta name=\"generator\" content=\"Jekyll v3.8.5\"> <title>Signin Template · Bootstrap</title> <link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\" integrity=\"sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T\" crossorigin=\"anonymous\"> <style> .bd-placeholder-img { font-size: 1.125rem; text-anchor: middle; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; } @media (min-width: 768px) { .bd-placeholder-img-lg { font-size: 3.5rem; } } html,body { height: 100%;}body { display: -ms-flexbox; display: flex; -ms-flex-align: center; align-items: center; padding-top: 40px; padding-bottom: 40px; background-color: #f5f5f5;}.form-signin { width: 100%; max-width: 330px; padding: 15px; margin: auto;}.form-signin .checkbox { font-weight: 400;}.form-signin .form-control { position: relative; box-sizing: border-box; height: auto; padding: 10px; font-size: 16px;}.form-signin .form-control:focus { z-index: 2;}.form-signin input[type=\"email\"] { margin-bottom: -1px; border-bottom-right-radius: 0; border-bottom-left-radius: 0;}.form-signin input[type=\"password\"] { margin-bottom: 10px; border-top-left-radius: 0; border-top-right-radius: 0;}.slidecontainer { width: 100%;}.slider { -webkit-appearance: none; width: 100%; height: 2px; background: #d3d3d3; outline: none; opacity: 0.7; -webkit-transition: .2s; transition: opacity .2s;}.slider:hover { opacity: 1;}.slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; background: #007bff; cursor: pointer; border-radius: 100%;}.slider::-moz-range-thumb { width: 25px; height: 25px; background: #007bff; c </style> <!-- Custom styles for this template --> </head> <body class=\"text-center\"> <?php if(isset($_POST['mode'])){echo $_POST['mode'];} ?> <form class=\"form-signin\"> <img class=\"mb-4\" src=\"https://i.imgur.com/41I9ccK.png\" alt=\"\" width=\"72\" height=\"72\"> <h1 class=\"h3 mb-3 font-weight-normal\">Greg's LEDs</h1> <div class=\"form-group row\"> <label style=\"padding-top:20px;\" for=\"example-color-input\" class=\"col-2 col-form-label\">Mode</label> <div class=\"col-10\"> <select style=\"margin:10px;\" class=\"form-control\" id=\"mode\" name=\"mode\" value=\"Rainbow...\" ><option value=\"Rainbow...\">Rainbow</option><option value=\"SolidColor\">Solid Color</option><option value=\"Audio.....\">Audio</option><option value=\"Wave......\">Wave</option></select> </div> <label style=\"padding-top:3px;\" for=\"example-color-input\" class=\"col-2 col-form-label\">Speed</label> <div class=\"col-10\"> <input style=\"margin:10px;height:1px;padding:5px\" class=\"slider form-control\" type=\"range\" min=\"100\" max=\"999\" value=\"550\" class=\"slider\" id=\"speed\" name=\"speed\"> </div> <label style=\"padding-top:20px;\" for=\"example-color-input\" class=\"col-2 col-form-label\">Color</label> <div class=\"col-10\"> <input style=\"margin:10px; height: 50px;padding:5px\" class=\"form-control\" type=\"color\" value=\"#a500f4\" id=\"color\" name=\"color\"> <button style=\"margin:10px;margin-top:20px;\" class=\"btn btn-lg btn-primary btn-block\" type=\"submit\">Submit</button> </div></div> <p class=\"mt-5 mb-3 text-muted\">© Designed by Greg Ensom</p></form></body></html>");
+            // All HTML Code out into one line:
+            // https://github.com/Grensom/WiFi-LED-Lights-NodeMCU for formatted version of HTML          
+            client.println("<html lang=\"en\"><head> <meta charset=\"utf-8\"> <link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"https://i.imgur.com/41I9ccK.png\"> <link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"https://i.imgur.com/41I9ccK.png\"> <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"https://i.imgur.com/41I9ccK.png\"> <link rel=\"manifest\" href=\"/site.webmanifest\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\"> <meta name=\"description\" content=\"Control your LEDs\"> <meta name=\"author\" content=\"Greg Ensom\"> <meta name=\"generator\" content=\"Jekyll v3.8.5\"> <title>GRENSOM LED</title> <link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\" integrity=\"sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T\" crossorigin=\"anonymous\"> <style> .bd-placeholder-img { font-size: 1.125rem; text-anchor: middle; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; } @media (min-width: 768px) { .bd-placeholder-img-lg { font-size: 3.5rem; } } html,body { height: 100%;}body { display: -ms-flexbox; display: flex; -ms-flex-align: center; align-items: center; padding-top: 40px; padding-bottom: 40px; background-color: #f5f5f5;}.form-signin { width: 100%; max-width: 350px; padding: 15px; margin: auto;}.form-signin .checkbox { font-weight: 400;}.form-signin .form-control { position: relative; box-sizing: border-box; height: auto; padding: 10px; font-size: 16px;}.form-signin .form-control:focus { z-index: 2;}.form-signin input[type=\"email\"] { margin-bottom: -1px; border-bottom-right-radius: 0; border-bottom-left-radius: 0;}.form-signin input[type=\"password\"] { margin-bottom: 10px; border-top-left-radius: 0; border-top-right-radius: 0;}.slidecontainer { width: 100%;}.slider { -webkit-appearance: none; width: 100%; height: 2px; background: #d3d3d3; outline: none; opacity: 0.7; -webkit-transition: .2s; transition: opacity .2s;}.slider:hover { opacity: 1;}.slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; background: #007bff; cursor: pointer; border-radius: 100%;}.slider::-moz-range-thumb { width: 25px; height: 25px; background: #007bff; c </style> <!-- Custom styles for this template --> </head> <body class=\"text-center\"> <form class=\"form-signin\"> <img class=\"mb-4\" src=\"https://i.imgur.com/41I9ccK.png\" alt=\"\" width=\"72\" height=\"72\"> <h1 class=\"h3 mb-3 font-weight-normal\">Greg's LEDs</h1> <div class=\"form-group row\"> <!-- ------------------------------------------ --> <label style=\"padding-top:20px;\" for=\"example-color-input\" class=\"col-3 col-form-label\">Mode</label> <div class=\"col-9\"> <select style=\"margin:10px;\" class=\"form-control\" id=\"mode\" name=\"mode\" value=\"Rainbow...\" ><option value=\"Rainbow...\">Rainbow</option><option value=\"SolidColor\">Solid Color</option><option value=\"Audio.....\">Audio</option><option value=\"Wave......\">Wave</option></select> </div> <!-- ---------------------------------------------- --> <label style=\"padding-top:3px;\" for=\"example-color-input\" class=\"col-3 col-form-label\">Speed</label> <div class=\"col-9\"> <input style=\"margin:10px;height:1px;padding:5px\" class=\"slider form-control\" type=\"range\" min=\"100\" max=\"999\" value=\"550\" class=\"slider\" id=\"speed\" name=\"speed\"> </div> <!-- -----------------NEED TO SUB 100----------------------------- --> <label style=\"padding-top:3px;\" for=\"example-color-input\" class=\"col-3 col-form-label\">Brightness</label> <div class=\"col-9\"> <input style=\"margin:10px;height:1px;padding:5px\" class=\"slider form-control\" type=\"range\" min=\"100\" max=\"355\" value=\"150\" class=\"slider\" id=\"brightness\" name=\"brightness\"> </div> <!-- ---------------------------------------------- --> <label style=\"padding-top:3px;\" for=\"example-color-input\" class=\"col-3 col-form-label\">Sensitivity</label> <div class=\"col-9\"> <input style=\"margin:10px;height:1px;padding:5px\" class=\"slider form-control\" type=\"range\" min=\"100\" max=\"200\" value=\"150\" class=\"slider\" id=\"Sensitivity\" name=\"Sensitivity\"> </div> <!-- ----------------------------------------- --> <label style=\"padding-top:20px;\" for=\"example-color-input\" class=\"col-3 col-form-label\">Color</label> <div class=\"col-9\"> <input style=\"margin:10px; height: 50px;padding:5px\" class=\"form-control\" type=\"color\" value=\"#a500f4\" id=\"color\" name=\"color\"> <button style=\"margin:10px;margin-top:20px;\" class=\"btn btn-lg btn-primary btn-block\" type=\"submit\">Submit</button> </div> <!-- -----------------------></div> <p class=\"mt-5 mb-3 text-muted\">© Designed by Greg Ensom</p></form><script type=\"text/javascript\"> if (window.location.href.length > 25) {var mode = window.location.href.slice(26,36); var speed = window.location.href.slice(43,46); var brightness = window.location.href.slice(58,61); var sensitivity = window.location.href.slice(74,77); var color = window.location.href.slice(87,93); document.getElementById(\"mode\").value = mode; document.getElementById(\"speed\").value = speed; document.getElementById(\"brightness\").value = brightness; document.getElementById(\"Sensitivity\").value = sensitivity; document.getElementById(\"color\").value = \"#\" + color;}</script></body></html>");
             
             // The HTTP response ends with another blank line
             client.println();
@@ -134,24 +139,36 @@ client.println("<html lang=\"en\"><head> <meta charset=\"utf-8\"> <meta name=\"v
     Serial.println("");
   }
 }
+//==============================================================
+//                  Functions
+//============================================================== 
+void getSens(){
+  String sensitivity = header.substring(54,57);
+  int sensInt = sensitivity.toInt();
+  Serial.println("THE SENS IS " + sensitivity);
+}
+
+void getBright(){
+  int brightInt = ((header.substring(43,46).toInt())-100);
+  BRIGHTNESS = brightInt;
+  FastLED.setBrightness(brightInt); // substract added 100 to make three digit number
+}
 
 void getSpeed(){
   String animationSpeed = header.substring(28,31);
   UPDATES_PER_SECOND = animationSpeed.toInt();
+  Serial.println("THE SPEED IS " + UPDATES_PER_SECOND);
 }
 
 void displayColors(){
   static uint8_t startIndex = 0;
-              startIndex = startIndex + 1; /* motion speed */
-              FillLEDsFromPaletteColors( startIndex);
-              FastLED.show();
-              FastLED.delay(1000 / (UPDATES_PER_SECOND/10));
-  }
+  startIndex = startIndex + 1; /* motion speed */
+  FillLEDsFromPaletteColors(startIndex, BRIGHTNESS);
+  FastLED.show();
+  FastLED.delay(1000 / (UPDATES_PER_SECOND/10));       
+}
 
-void FillLEDsFromPaletteColors( uint8_t colorIndex)
-{
-    uint8_t brightness = 255;
-    
+void FillLEDsFromPaletteColors( uint8_t colorIndex, int brightness){
     for( int i = 0; i < NUM_LEDS; i++) {
         leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
         colorIndex += 3;
